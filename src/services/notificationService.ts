@@ -561,3 +561,40 @@ export async function getHomePageNotifications(): Promise<Record<string, Array<{
   return grouped;
 }
 
+// Get notifications by category
+export async function getNotificationsByCategory(category: string, page: number, limit: number) {
+  console.log('category', category, 'page', page, 'limit', limit);
+  const offset = (page - 1) * limit;
+
+  const result = await pool.query(
+    `SELECT id, title
+     FROM notifications
+     WHERE isarchived = FALSE
+       AND approved_at IS NOT NULL
+       AND category = $1
+     ORDER BY created_at DESC
+     LIMIT $2 OFFSET $3`,
+    [category, limit, offset]
+  );
+
+  const countResult = await pool.query(
+    `SELECT COUNT(*) AS total
+     FROM notifications
+     WHERE isarchived = FALSE
+       AND approved_at IS NOT NULL
+       AND category = $1`,
+    [category]
+  );
+
+  const total = parseInt(countResult.rows[0].total, 10);
+  const rowCount = result.rowCount ?? 0; // Safe default!
+  const hasMore = offset + rowCount < total;
+
+  const data = result.rows.map(row => ({
+    name: row.title,
+    notification_id: row.id.toString(),
+  }));
+
+  return { data, total, page, hasMore };
+}
+

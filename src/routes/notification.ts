@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { addCompleteNotification, approveNotification, archiveNotification, editNotification, getHomePageNotifications, getNotificationById, unarchiveNotification, viewNotifications } from '../services/notificationService';
+import { addCompleteNotification, approveNotification, archiveNotification, editNotification, getHomePageNotifications, getNotificationById, getNotificationsByCategory, unarchiveNotification, viewNotifications } from '../services/notificationService';
 
 const router = Router();
 /******************************************************************************
@@ -97,6 +97,21 @@ router.get('/home', async (req, res) => {
     res.status(500).json({ error: 'Database error', details: err });
   }
 });
+
+// Group notifications by category for the HomePage
+router.get('/category/:category', async (req, res) => {
+  try {
+    const { category } = req.params;
+    const page = parseInt(req.query.page as string, 10) || 1;
+    const limit = parseInt(req.query.limit as string, 10) || 20;
+
+    const result = await getNotificationsByCategory(category, page, limit);
+    res.json({ success: true, ...result });
+  } catch (err) {
+    res.status(500).json({ error: 'Database error', details: err });
+  }
+});
+
 
 
 export default router;
