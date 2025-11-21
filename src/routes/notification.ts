@@ -102,7 +102,7 @@ router.get('/home', async (req, res) => {
 router.get('/category/:category', async (req, res) => {
   try {
     const { category } = req.params;
-    const { searchValue } = req.query; // <-- query, not params!
+    const { searchValue } = req.query;
     const page = parseInt(req.query.page as string, 10) || 1;
     const limit = parseInt(req.query.limit as string, 10) || 20;
 
@@ -114,7 +114,6 @@ router.get('/category/:category', async (req, res) => {
     );
     res.json({ success: true, ...result });
   } catch (err) {
-    console.error(err); // <-- always log!
     res.status(500).json({ error: 'Database error', details: String(err) });
   }
 });
