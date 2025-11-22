@@ -10,9 +10,8 @@ const cognito = new CognitoIdentityProviderClient({
   region: process.env.AWS_REGION,
 });
 
-export async function registerUser(data: RegisterRequest) {
+export async function signUpUser(data: RegisterRequest) {
   const { email, password, given_name, family_name, gender } = data;
-
   // Basic validation
   if (!email || !password || !given_name || !family_name || !gender) {
     createThrowError(400, "BadRequest", "All fields are required", { email });

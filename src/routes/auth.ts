@@ -1,6 +1,6 @@
 // src/routes/auth.ts
 import { Router, Request, Response } from "express";
-import { registerUser } from "../services/authService";
+import { signUpUser } from "../services/authService";
 import {
   IResponse,
   ISignUpRes,
@@ -10,11 +10,11 @@ import {
 
 const router = Router();
 
-router.post("/register", async (req: Request, res: Response) => {
+router.post("/signup", async (req: Request, res: Response) => {
   const data: RegisterRequest = req.body;
 
   try {
-    const success = await registerUser(data);
+    const success = await signUpUser(data);
 
      const resData: IResponse<ISignUpRes> = {
       status: 200,
