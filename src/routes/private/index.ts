@@ -6,6 +6,7 @@ import scraperAdminRoutes from "./scraperAdmin"
 import adminRoleRoutes from "./adminRole"
 import eligibilityRoutes from "./eligibility"
 import emailTemplateRoutes from "./emailTemplate"
+import usersRoutes from "./users"
 
 const router = Router();
 
@@ -16,5 +17,6 @@ router.use("/scraper", scraperAdminRoutes);
 router.use("/admin-roles", adminRoleRoutes);
 router.use("/eligibility", eligibilityRoutes);
 router.use("/email-templates", emailTemplateRoutes);
+router.use("/users", usersRoutes);
 
 export default router;

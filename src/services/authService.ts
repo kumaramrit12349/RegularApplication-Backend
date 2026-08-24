@@ -29,51 +29,60 @@ const cognito = new CognitoIdentityProviderClient({
 });
 
 export async function checkCognitoForDuplicateEmail(email: string, checkingFor: "manual" | "google") {
+  // Step 1: Fetch all Cognito users with this email.
+  // This is isolated in its own try/catch so a Cognito API failure
+  // fails-safe (blocks the request) instead of silently allowing a duplicate.
+  let cognitoUsers: { UserStatus?: string; Username?: string }[] = [];
   try {
     const cmd = new ListUsersCommand({
       UserPoolId: COGNITO_CONFIG.userPoolId,
       Filter: `email = "${email}"`,
     });
     const res = await cognito.send(cmd);
-    if (res.Users && res.Users.length > 0) {
-      let manualUserExists = false;
-      let googleUserExists = false;
-      let googleUsername = "";
+    cognitoUsers = res.Users ?? [];
+  } catch (err) {
+    console.error("checkCognitoForDuplicateEmail - ListUsers failed:", err);
+    // Fail-safe: if we can't verify uniqueness, block the request.
+    createThrowError(500, "InternalServerError", "Unable to verify email availability. Please try again.", { email });
+    return; // unreachable; satisfies TypeScript control flow
+  }
 
-      for (const user of res.Users) {
-        if (user.UserStatus === "EXTERNAL_PROVIDER") {
-          googleUserExists = true;
-          googleUsername = user.Username || "";
-        } else {
-          manualUserExists = true;
-        }
-      }
+  // Step 2: Check for conflicts.
+  // createThrowError throws, so these run OUTSIDE of any try/catch
+  // and propagate directly to the caller.
+  if (cognitoUsers.length > 0) {
+    let manualUserExists = false;
+    let googleUserExists = false;
+    let googleUsername = "";
 
-      if (checkingFor === "manual" && googleUserExists) {
-        createThrowError(400, "Conflict", "Email already registered with Google sign-in. Please log in with Google.", { email });
-      }
-
-      if (checkingFor === "google" && manualUserExists) {
-        // Since AWS Cognito provisions the EXTERNAL_PROVIDER user right before hitting our code,
-        // we must clean up this phantom user so it doesn't linger in their user pool.
-        if (googleUserExists && googleUsername) {
-          try {
-            await cognito.send(new AdminDeleteUserCommand({
-              UserPoolId: COGNITO_CONFIG.userPoolId,
-              Username: googleUsername
-            }));
-          } catch(e) {
-            console.error("Failed to delete phantom google user:", e);
-          }
-        }
-        createThrowError(400, "Conflict", "Email already registered with manual sign-up. Please log in with your email and password.", { email });
+    for (const user of cognitoUsers) {
+      if (user.UserStatus === "EXTERNAL_PROVIDER") {
+        googleUserExists = true;
+        googleUsername = user.Username || "";
+      } else {
+        manualUserExists = true;
       }
     }
-  } catch (err: any) {
-    if (err.code === 400 && err.message?.includes("Email already registered")) {
-      throw err; // Re-throw our custom error
+
+    if (checkingFor === "manual" && googleUserExists) {
+      createThrowError(400, "Conflict", "Email already exists. Try signing in with Google.", { email });
     }
-    console.error("checkCognitoForDuplicateEmail error:", err);
+
+    if (checkingFor === "google" && manualUserExists) {
+      // Cognito provisions the EXTERNAL_PROVIDER user before our callback runs.
+      // Delete the phantom Google user so it doesn't linger in the pool.
+      if (googleUserExists && googleUsername) {
+        try {
+          await cognito.send(new AdminDeleteUserCommand({
+            UserPoolId: COGNITO_CONFIG.userPoolId,
+            Username: googleUsername,
+          }));
+        } catch (e) {
+          console.error("Failed to delete phantom google user:", e);
+        }
+      }
+      createThrowError(400, "Conflict", "Email already exists. Try logging in with your email and password.", { email });
+    }
   }
 }
 
