@@ -70,6 +70,11 @@ provider:
             - arn:aws:dynamodb:${self:provider.region}:*:table/ApplyIndia-${self:provider.stage}/index/*
         - Effect: Allow
           Action:
+            - cognito-idp:ListUsers
+          Resource:
+            - arn:aws:cognito-idp:${self:provider.region}:*:userpool/*
+        - Effect: Allow
+          Action:
             - ses:SendEmail
             - ses:SendRawEmail
           Resource: "*"
